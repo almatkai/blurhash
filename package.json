@@ -3,7 +3,7 @@
   "name": "blurhash",
   "title": "BlurHash",
   "description": "Generate blurhash from clipboard content or Finder",
-  "icon": "extension-icon.png",
+  "icon": "assets/extension-icon.png",
   "author": "almatkai",
   "categories": [
     "Developer Tools"

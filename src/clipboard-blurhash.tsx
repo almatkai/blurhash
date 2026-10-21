@@ -5,12 +5,13 @@ import {
   showToast,
   Toast,
   Clipboard,
+  getSelectedFinderItems,
   List,
   Icon,
   open,
 } from "@raycast/api";
 import { useEffect, useState } from "react";
-import { execSync } from "child_process";
+import { execFileSync } from "node:child_process";
 import { encode, decode } from "blurhash";
 import path from "path";
 import fs from "fs";
@@ -54,29 +55,39 @@ function aspectRatio(w: number, h: number): string {
 }
 
 function findBinary(name: string): string | null {
-  for (const p of [
-    `/opt/homebrew/bin/${name}`,
-    `/usr/local/bin/${name}`,
-    `/usr/bin/${name}`,
-  ]) {
+  const executable = process.platform === "win32" ? `${name}.exe` : name;
+  const knownPaths =
+    process.platform === "darwin"
+      ? [`/opt/homebrew/bin/${name}`, `/usr/local/bin/${name}`, `/usr/bin/${name}`]
+      : [];
+  for (const p of knownPaths) {
     if (fs.existsSync(p)) return p;
   }
   try {
-    return execSync(`which ${name}`, { encoding: "utf-8" }).trim() || null;
+    const locator = process.platform === "win32" ? "where.exe" : "which";
+    return execFileSync(locator, [executable], { encoding: "utf-8", windowsHide: true })
+      .split(/\r?\n/)
+      .find(Boolean) ?? null;
   } catch {
     return null;
   }
 }
 
+function ffmpegInstall(): { command: string; url: string; manager: string } {
+  return process.platform === "win32"
+    ? { command: "winget install --id Gyan.FFmpeg", url: "https://www.gyan.dev/ffmpeg/builds/", manager: "WinGet" }
+    : { command: "brew install ffmpeg", url: "https://formulae.brew.sh/formula/ffmpeg", manager: "Homebrew" };
+}
+
 function getDimensions(filePath: string): { width: number; height: number } {
   const ffprobe = findBinary("ffprobe");
   if (!ffprobe)
-    throw new Error("ffprobe not found — install with: brew install ffmpeg");
+    throw new Error(`ffprobe not found — install with: ${ffmpegInstall().command}`);
 
-  const out = execSync(
-    `"${ffprobe}" -v quiet -print_format json -show_streams "${filePath}"`,
-    { encoding: "utf-8" },
-  );
+  const out = execFileSync(ffprobe, ["-v", "quiet", "-print_format", "json", "-show_streams", filePath], {
+    encoding: "utf-8",
+    windowsHide: true,
+  });
   const streams = JSON.parse(out).streams;
   const video = streams.find(
     (s: { width?: number; height?: number }) => s.width && s.height,
@@ -92,11 +103,12 @@ function getPixelData(
 ): Uint8ClampedArray {
   const ffmpeg = findBinary("ffmpeg");
   if (!ffmpeg)
-    throw new Error("ffmpeg not found — install with: brew install ffmpeg");
+    throw new Error(`ffmpeg not found — install with: ${ffmpegInstall().command}`);
 
-  const buf = execSync(
-    `"${ffmpeg}" -y -i "${filePath}" -vframes 1 -s ${w}x${h} -f rawvideo -pix_fmt rgba pipe:1`,
-    { maxBuffer: 50 * 1024 * 1024 },
+  const buf = execFileSync(
+    ffmpeg,
+    ["-y", "-i", filePath, "-vframes", "1", "-s", `${w}x${h}`, "-f", "rawvideo", "-pix_fmt", "rgba", "pipe:1"],
+    { maxBuffer: 50 * 1024 * 1024, windowsHide: true },
   );
   return new Uint8ClampedArray(buf);
 }
@@ -114,7 +126,7 @@ interface BlurHashResult {
 function generatePreview(hash: string, width: number, height: number): string {
   const ffmpeg = findBinary("ffmpeg");
   if (!ffmpeg)
-    throw new Error("ffmpeg not found — install with: brew install ffmpeg");
+    throw new Error(`ffmpeg not found — install with: ${ffmpegInstall().command}`);
 
   const pw = 400;
   const ph = Math.round((height / width) * pw);
@@ -125,9 +137,10 @@ function generatePreview(hash: string, width: number, height: number): string {
   const pngPath = path.join(os.tmpdir(), `blurhash-png-${Date.now()}.png`);
 
   fs.writeFileSync(rawPath, Buffer.from(pixels.buffer));
-  execSync(
-    `"${ffmpeg}" -y -f rawvideo -pix_fmt rgba -s ${pw}x${ph} -i "${rawPath}" "${pngPath}"`,
-    { stdio: "pipe" },
+  execFileSync(
+    ffmpeg,
+    ["-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", `${pw}x${ph}`, "-i", rawPath, pngPath],
+    { stdio: "pipe", windowsHide: true },
   );
 
   const pngBuffer = fs.readFileSync(pngPath);
@@ -187,28 +200,6 @@ function resolveClipboardFile(clip: {
     if (isFile(text) && hasSupportedExt(text)) return text;
   }
 
-  // Method 3: AppleScript to get Finder copied file
-  try {
-    const result = execSync(
-      `osascript -e 'try' -e 'set f to the clipboard as «class furl»' -e 'return POSIX path of f' -e 'end try'`,
-      { encoding: "utf-8", timeout: 3000 },
-    ).trim();
-    if (isFile(result) && hasSupportedExt(result)) return result;
-  } catch {
-    // ignore
-  }
-
-  // Method 4: Get current Finder selection
-  try {
-    const result = execSync(
-      `osascript -e 'tell application "Finder"' -e 'if (count of (selection as list)) > 0 then' -e 'return POSIX path of (first item of (selection as alias list) as alias)' -e 'end if' -e 'end tell'`,
-      { encoding: "utf-8", timeout: 3000 },
-    ).trim();
-    if (isFile(result) && hasSupportedExt(result)) return result;
-  } catch {
-    // ignore
-  }
-
   return null;
 }
 
@@ -250,7 +241,7 @@ function FallbackMenu({
       <List.EmptyView
         icon={Icon.Image}
         title="No image found in clipboard"
-        description="Select a file from Finder or pick from Clipboard History"
+        description="Select a file in Finder or File Explorer, or copy a supported file"
       />
       <List.Item
         icon={Icon.Clipboard}
@@ -270,20 +261,18 @@ function FallbackMenu({
         }
       />
       <List.Item
-        icon={Icon.Finder}
-        title="Select from Finder"
-        subtitle="Pick an image or video file"
+        icon={Icon.Document}
+        title="Use Selected File"
+        subtitle="Read the image or video selected in Finder or File Explorer"
         actions={
           <ActionPanel>
             <Action
-              title="Open File Picker"
+              title="Generate from Selected File"
               onAction={async () => {
                 try {
-                  const filePath = execSync(
-                    `osascript -e 'POSIX path of (choose file of type {"public.jpeg", "public.png", "com.compuserve.gif", "com.microsoft.bmp", "org.webmproject.webp", "public.tiff", "public.heic", "public.heif", "public.avif", "com.microsoft.ico", "public.movie"} with prompt "Select an image or video")'`,
-                    { encoding: "utf-8", timeout: 120000 },
-                  ).trim();
-                  if (!filePath || !isFile(filePath)) return;
+                  const selected = await getSelectedFinderItems();
+                  const filePath = selected.find((item) => isFile(item.path) && hasSupportedExt(item.path))?.path;
+                  if (!filePath) throw new Error("Select a supported image or video file first.");
                   await showToast({
                     style: Toast.Style.Animated,
                     title: "Generating BlurHash...",
@@ -294,19 +283,12 @@ function FallbackMenu({
                     style: Toast.Style.Success,
                     title: "Done!",
                   });
-                  // Bring Raycast back to focus after native file dialog
-                  setTimeout(() => {
-                    try {
-                      execSync(
-                        `osascript -e 'tell application "System Events" to tell process "Raycast" to set frontmost to true'`,
-                        { stdio: "pipe", timeout: 3000 },
-                      );
-                    } catch {
-                      /* ignore */
-                    }
-                  }, 100);
-                } catch {
-                  // User cancelled the dialog
+                } catch (error) {
+                  await showToast({
+                    style: Toast.Style.Failure,
+                    title: "Could not use selected file",
+                    message: error instanceof Error ? error.message : String(error),
+                  });
                 }
               }}
             />
@@ -356,7 +338,11 @@ export default function Command() {
           title: "Reading clipboard...",
         });
         const clip = await Clipboard.read();
-        const filePath = resolveClipboardFile(clip);
+        let filePath = resolveClipboardFile(clip);
+        if (!filePath) {
+          const selected = await getSelectedFinderItems().catch(() => []);
+          filePath = selected.find((item) => isFile(item.path) && hasSupportedExt(item.path))?.path ?? null;
+        }
 
         if (!filePath) {
           await showToast({
@@ -390,18 +376,19 @@ export default function Command() {
   }, []);
 
   if (missingFfmpeg) {
+    const install = ffmpegInstall();
     return (
       <Detail
-        markdown={`# ffmpeg not found\n\nThis extension requires ffmpeg to process images and videos.\n\nInstall it with Homebrew:\n\n\`\`\`\nbrew install ffmpeg\n\`\`\``}
+        markdown={`# ffmpeg not found\n\nThis extension requires ffmpeg to process images and videos.\n\nInstall it with ${install.manager}:\n\n\`\`\`\n${install.command}\n\`\`\``}
         actions={
           <ActionPanel>
             <Action.CopyToClipboard
               title="Copy Install Command"
-              content="brew install ffmpeg"
+              content={install.command}
             />
             <Action.OpenInBrowser
-              title="Open Homebrew Formula"
-              url="https://formulae.brew.sh/formula/ffmpeg"
+              title={`Open ${install.manager} Instructions`}
+              url={install.url}
             />
           </ActionPanel>
         }
