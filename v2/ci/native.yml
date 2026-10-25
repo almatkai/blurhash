@@ -1,0 +1,73 @@
+# Reviewable template only. Nothing under .github/workflows is activated.
+name: BlurHash native validation
+on: [workflow_dispatch]
+jobs:
+  native:
+    strategy:
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+            binary: tezbar-blurhash
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary: tezbar-blurhash.exe
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: v2
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.98.0
+          components: rustfmt, clippy
+          targets: ${{ matrix.target }}
+      - name: Assert native architecture
+        run: |
+          rustc -vV
+          test "$(rustc -vV | sed -n 's/^host: //p')" = '${{ matrix.target }}'
+      - run: cargo fmt --check
+      - run: cargo test --all-targets --all-features --locked
+      - run: cargo clippy --all-targets --all-features --locked -- -D warnings
+      - run: cargo build --release --locked --bin tezbar-blurhash --target '${{ matrix.target }}'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prepare exact V1 dependency copy; never run source against desktop
+        run: |
+          python scripts/prepare-v1.py
+          npm ci --ignore-scripts --prefix .work/v1
+          npm run test --prefix .work/v1
+          npm run typecheck --prefix .work/v1
+          node scripts/source-oracle.cjs
+          node scripts/renderer-contracts.cjs
+          python scripts/contracts.py
+          mkdir -p .work/schema
+          cp ci/schema/package.json ci/schema/package-lock.json .work/schema/
+          npm ci --ignore-scripts --prefix .work/schema --cache .work/npm-cache
+          node scripts/schema-check.cjs
+      - name: Package native target (no release/install)
+        run: python scripts/package.py --binary 'target/${{ matrix.target }}/release/${{ matrix.binary }}' --target '${{ matrix.target }}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blurhash-${{ matrix.target }}
+          path: v2/output/*
+  msrv:
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: v2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.85.0
+          components: rustfmt, clippy
+      - run: cargo test --all-targets --all-features --locked
+      - run: cargo clippy --all-targets --all-features --locked -- -D warnings

@@ -1,0 +1,11 @@
+--- a/src/renderer/src/raycast-api/detail-runtime.tsx
++++ b/src/renderer/src/raycast-api/detail-runtime.tsx
+@@ -553,7 +553,7 @@
+           </button>
+           <div className="text-[12px] font-semibold text-ink-2">{title}</div>
+           <div className="ml-auto flex items-center gap-1">
+-            <button type="button" className="btn btn-ghost" onClick={onRunPrimaryAction}>
++            <button type="button" className="btn btn-ghost" onClick={() => onRunPrimaryAction()}>
+               Enter
+             </button>
+             <button type="button" className="btn btn-ghost" onClick={onOpenActions}>

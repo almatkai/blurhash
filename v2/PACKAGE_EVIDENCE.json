@@ -1,0 +1,41 @@
+{
+  "isolatedBuild": {
+    "target": "aarch64-apple-darwin",
+    "sha256": "69e67e17cc6c63262005ec4fcd8972b0ea4f32ae8ae377bf2069a8409414acb4",
+    "bytes": 1133808,
+    "sdk": "e955911f0bf5b558f9d3eb5183df0adc95c22af2",
+    "cargoLockSha256": "39c795c0c1cd304d888cb15705c718237cc62c97a20b61aa3505ca5f4cf29957",
+    "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+    "binary": ".work/isolated/run-6u1vofzt/target/aarch64-apple-darwin/release/tezbar-blurhash",
+    "sourceDirectory": ".work/isolated/run-6u1vofzt/source",
+    "freshCargoHome": true,
+    "localPathDependency": false
+  },
+  "package": {
+    "target": "aarch64-apple-darwin",
+    "zip": "blurhash-2.0.0-aarch64-apple-darwin.zip",
+    "zipBytes": 1964054,
+    "zipSha256": "84010304a43837658d735c68bb7c822c5cfde7fa09e5c9ae7087d1bff95609d9",
+    "executable": "bin/tezbar-blurhash",
+    "executableBytes": 1133808,
+    "executableSha256": "69e67e17cc6c63262005ec4fcd8972b0ea4f32ae8ae377bf2069a8409414acb4",
+    "iconSha256": "65de4d066d5fda7187729cf4a4e3c6229389aff749ae58ca7b34a487381e521f",
+    "members": 143,
+    "artifacts": {},
+    "publication": "not-published; trusted artifact URLs/digests remain parent-owned"
+  },
+  "checks": {
+    "sourceCopyEqualsCurrentProductionCode": true,
+    "zipDeterministicTwoRunsFromSameBinary": true,
+    "completeArchiveMemberInventory": true,
+    "nativeHeader": "Mach-O 64-bit little-endian ARM64",
+    "extractedProtocolInfo": true,
+    "extractedSelfTest": true,
+    "extractedJsonlHelloInitializeShutdown": true,
+    "liveHelperLocatingUsedInJsonlSmoke": false,
+    "desktopCalls": 0,
+    "installed": false,
+    "published": false
+  },
+  "buildReproducibilityLimit": "ZIP output is deterministic for the same supplied binary. A universal byte-identical Rust binary across different build paths/toolchains is not claimed."
+}

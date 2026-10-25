@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 3,
+  "id": "com.tezbar.native.blurhash",
+  "slug": "blurhash",
+  "name": "BlurHash",
+  "version": "2.0.0",
+  "description": "Generate a BlurHash from clipboard pixels, a local media path, or a selected file",
+  "author": "Freaktion; Tezbar port by almatkai",
+  "icon": "resources/extension-icon.png",
+  "runtime": "rust",
+  "execution": "process",
+  "protocolVersion": 1,
+  "repository": "https://github.com/almatkai/blurhash",
+  "platforms": ["macOS", "Windows"],
+  "commands": [{
+    "name": "clipboard-blurhash",
+    "title": "BlurHash",
+    "subtitle": "From Clipboard or Selected File",
+    "platforms": ["macOS", "Windows"],
+    "runtime": "rust",
+    "timeoutMs": 60000,
+    "refreshMs": null,
+    "concurrency": "reject-while-busy"
+  }],
+  "preferences": [],
+  "replaces": ["com.tezbar.blurhash", "raycast.blurhash"],
+  "capabilities": ["clipboard.read", "clipboard.write", "selection.read", "shell.open"],
+  "artifacts": {},
+  "files": {},
+  "verification": [
+    {"platform":"macOS","state":"not-run","note":"Desktop clipboard, Finder and real GUI acceptance not run; automated native process/media evidence is separate."},
+    {"platform":"Windows","state":"not-run","note":"Native MSVC and Explorer/clipboard/GUI acceptance not run."}
+  ]
+}

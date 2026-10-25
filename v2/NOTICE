@@ -1,0 +1,31 @@
+BlurHash native Rust extension, version 2.0.0
+
+Original extension author: Freaktion, upstream owner @freaktion-craft.
+Raycast extension source/icon: raycast/extensions at
+6734d85992290066fd31a7f5bee3cca3d3545a1a, extensions/blurhash.
+Original icon PNG is preserved exactly; not generated or substituted.
+Own Tezbar V1 repository: almatkai/blurhash at
+048ffb1ac00ed2e5a7a7e99b69248d769663c7f5, MIT.
+Rust adaptation: almatkai, 2026, MIT. V1 LICENSE has literal escaped newlines;
+package LICENSE normalizes those escapes; original bytes remain in V1/fixtures.
+
+Encoder/decoder derived from Wolt BlurHash TypeScript 2.0.5, MIT,
+Copyright (c) 2018 Wolt Enterprises. npm integrity and sources retained.
+Its published source-map contents were byte-compared with TypeScript/src at
+cb151cab5b7d9cd3eef624e12e30381c6d292f0d (the 2.0.5 package commit).
+
+Independent tezbar-extension-sdk 0.1.1 at
+e955911f0bf5b558f9d3eb5183df0adc95c22af2 is Apache-2.0.
+Its license and NOTICE are included, along with the resolved Cargo dependency
+license texts and SPDX expressions in licenses/rust-dependencies.json.
+For multi-licensed Rust dependencies choose the MIT/Apache alternatives where
+available. r-efi is an unselected UEFI target dependency; its complete MIT grant
+and copyright/authors were recovered at its own .cargo_vcs_info commit.
+
+Frozen Tezbar host test excerpts are Apache-2.0; the host license is included.
+These excerpts/patches are test evidence, not dependencies of the executable.
+
+FFmpeg and ffprobe are separately installed native helper dependencies, as in
+V1. They are NOT bundled, installed, downloaded or licensed by this archive.
+Their decoder availability and licensing depend on the user's external build.
+The extension itself requires no JavaScript, Bun, Tauri or app runtime.
