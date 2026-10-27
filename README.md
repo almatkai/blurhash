@@ -30,3 +30,5 @@ Requires [ffmpeg](https://formulae.brew.sh/formula/ffmpeg):
 ```
 brew install ffmpeg
 ```
+
+[Native Rust v2 implementation and validation](v2/README.md)

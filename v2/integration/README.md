@@ -1,0 +1,12 @@
+# Generic frozen-host prerequisites (not applied)
+
+Baseline: Tezbar `ea100cee3f69711de12485ba061950c5fc65258f`. All host reads came from committed Git objects. No host, profile, SDK, sibling or ledger source was edited or built.
+
+1. `detail-primary-action.patch` changes only the Detail Enter button's click wrapper. Frozen `DetailRuntime` forwards the browser event to the outer `(actionId?, formValues?)` callback, causing a MouseEvent to be treated as the ID. The wrapper invokes it without an argument so the outer surface selects its canonical primary action. `node v2/scripts/renderer-contracts.cjs` executes the actual frozen Detail + surface functions with fake React elements: before receives an object, after receives `7:copy-hash`. Keyboard Enter already sends an explicit action ID.
+2. `registry-resource-root.patch` retains `Installed.path` as the canonical mutable preference/discovery root, while recording `resource_path` from the already verified `Package.dir`. Both extension and command icons resolve from that active version's resources. It does not reinterpret active.json independently, weaken install verification, or relocate preferences. The test executes actual before/after collect/icon functions with only roots and the successfully verified Package return as seams. Before cannot find the packaged icon; after finds the exact version resource and the canonical path remains unchanged.
+
+`python3 v2/scripts/contracts.py` verifies generated validator/registry excerpts against frozen fixtures plus the exact in-memory patch. `cargo test --manifest-path v2/Cargo.toml --test resources --test contracts --locked` runs their behavior. These are scoped executable tests, not a full host build or GUI acceptance.
+
+Existing real renderer already supports a pure `![preview](data:image/png;base64,...)` Detail and root.metadata with `Detail.Metadata.Label`. No query suffix is appended to the PNG. List rows use `props.actionIds`, and typed actions use exact `actionId` strings. Renderer contract tests check these paths directly. Full DOM/React layout, icons in a live launcher and platform selection/clipboard still require parent acceptance.
+
+There is no generic typed host navigation service at the baseline. The extension's Clipboard History action displays an honest route-to-command instruction; it neither opens another app's Raycast URI nor invents an RPC. A future generic navigation API is optional follow-up work, not a hidden prerequisite patch here.
